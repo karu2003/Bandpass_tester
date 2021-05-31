@@ -40,7 +40,7 @@ FORMAT = pyaudio.paInt16
 
 sweep = 5
 blocksize = 1024 * 4
-g_amplitude = 17750  # 18550 - 3.3V P2P
+g_amplitude = 17750  # 17750 - 1.0V P2P
 chirp_x = 0
 chirp_y = []
 sound = []
@@ -150,6 +150,7 @@ bg_color = 60
 terms = 25
 
 sweep_gen()
+sound.set_volume(0.1)
 sound.play(-1)
 
 done = False
