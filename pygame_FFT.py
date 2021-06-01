@@ -96,6 +96,9 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 def gauss(x, a, mu, sig):
     return a**np.exp(-(x-mu)**2/(2.*sig**2))
 
+def linear(x, a, b):
+	return a * x + b 
+
 def pre_amp(i):
     switcher={
         11:'7/17',
@@ -177,16 +180,39 @@ while not done:
     spline = UnivariateSpline(x, fft_complex, s=0) 
     fitted_curve = spline(x)
   
-    fitted_curve = fitted_curve - np.min(fitted_curve)
     max_fitted = np.max(fitted_curve)
-    fitted_curve2 = fitted_curve - max_fitted*0.5
+    fitted_curve2 = fitted_curve - max_fitted * 0.5
+    fitted_curve2 = np.sqrt(fitted_curve2)
+    fitted_curve2[np.isnan(fitted_curve2)] = 0
+ 
+###### Fitting 0dB frequency #########
+    # fit_point = 3
+    # x_slope = np.arange(0, fit_point, 1)
+    # _3dB_slope = [i for i in fitted_curve2 if i > 0]
+    # x_center = int(len(_3dB_slope)/2)
+    # y_center = _3dB_slope[x_center]
+    # # y_center = np.mean(_3dB_slope[x_center-fit_point:x_center-fit_point])
+    # _3dB_slopeL = _3dB_slope[:fit_point]
+
+    # popt, _ = curve_fit(linear, x_slope, _3dB_slopeL)
+    # a, b = popt
+    # _0dB_fL = int((y_center-b)/a)
+
+    # _3dB_slopeR = _3dB_slope[-fit_point:]
+    # popt, _ = curve_fit(linear, x_slope, _3dB_slopeR)
+    # a, b = popt
+    # _0dB_fR = int((y_center-b)/a)
+######################################    
+
     r = [idx for idx, val in enumerate(fitted_curve2) if val > 0]
   
     try:
         band[0]= (f_vec[-1]*r[0])/len(f_vec)
         band[1]= (f_vec[-1]*r[-1])/len(f_vec)
+        band[2]= 0#(f_vec[-1]*r[_0dB_fL])/len(f_vec)
+        band[3]= 0#(f_vec[-1]*r[-_0dB_fR])/len(f_vec)
     except:
-        band = [0000,0000]     
+        band = [0000,0000,0000,0000]     
 
     max_val = np.max(fft_complex)
     scale_value = SCREEN_HEIGHT / max_val
@@ -216,6 +242,7 @@ while not done:
         level_textRect.x, level_textRect.y = round(0.015*SCREEN_WIDTH), round(0.2*SCREEN_HEIGHT)
 
         preamp_text = preamp_font.render('Pre Amp: '+ (pre_str), True, (255, 255, 255) , (bg_color, bg_color, bg_color))
+        # preamp_text = preamp_font.render('Pre Amp: %.0f / %.0f' %(band[2],band[3]), True, (255, 255, 255) , (bg_color, bg_color, bg_color))
         preamp_textRect = preamp_text.get_rect()
         preamp_textRect.x, preamp_textRect.y = round(0.015*SCREEN_WIDTH), round(0.3*SCREEN_HEIGHT)
 
