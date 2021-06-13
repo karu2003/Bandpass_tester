@@ -1,5 +1,5 @@
 ![Screenshot](bandpass.jpg)
-# Bandpass filter Tester on RPi 
+# Bandpass filter Tester on RPi without control 
 measures the cutoff frequency of the bandpass filter. input signal up to 80Khz.
 Used pygame-1.9.5,  Adafruit PiTFT - 2.8" Touchscreen Display for Raspberry Pi, HIFIBERRY DAC+ ADC.
 in Display, you need to cut the grio 18. 
