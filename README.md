@@ -25,6 +25,13 @@ sudo apt-get install libsdl2-2.0-0 libsdl2-gfx-1.0-0 libsdl2-image-2.0-0 libsdl2
 
 sudo pip3 install pygame==1.9.5
 
+test of available fonts
+import pygame
+pygame.init()
+print(pygame.font.get_fonts())
+if None
+sudo apt-get install ttf-mscorefonts-installer
+
 # edit in /boot/config.txt
 #dtparam=audio=on
 
