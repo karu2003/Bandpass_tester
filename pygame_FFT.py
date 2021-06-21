@@ -191,7 +191,7 @@ gain = 0
 Bands = {
      7:[28,40,52,63,75,86,66,78,'7/17'],
     12:[26,38,50,62,74,85,66,77,'12/24'],
-    18:[26,38,50,62,74,85,65,77,'18/34'],
+    18:[26,38,50,62,74,85,67,77,'18/34'],
     40:[25,36,48,60,72,83,66,75,'40/80'],
 }
 
@@ -208,18 +208,18 @@ def check_Band(num):
                 return 7    
             if num in range(16,18):
                 return 12
-            if num in range(23,26):
+            if num in range(22,26):
                 return 18                
-            if num in range(39,40):
+            if num in range(39,67):
                 return 40    
         else: #Main
             if num in range(11,13):
                 return 7    
             if num in range(18,20):
                 return 12
-            if num in range(23,26):
+            if num in range(22,26):
                 return 18                
-            if num in range(46,47):
+            if num in range(44,48):
                 return 40
     else:
         pass            
@@ -318,7 +318,7 @@ pygame.event.set_blocked(pygame.MOUSEBUTTONUP)
 
 clock = pygame.time.Clock()
 
-Step_interval = 500 # ms
+Step_interval = 500 # ms 500
 
 pygame.time.set_timer(USEREVENT + 1, Step_interval)
 
@@ -376,7 +376,9 @@ while not done:
             break
 
         elif event.type == pygame.USEREVENT + 1:
-            if Run and M_Band:      
+            if Run and M_Band:
+                # print(center_f)
+                # print(max_level_dB)      
                 step_len = len(Bands[M_Band])-1
                 if step == step_len-1:
                     Channel = 0
@@ -418,11 +420,12 @@ while not done:
             if event.button == 1:    # button 1 = GPIO 17
                 Run = not Run
                 fault = 1
+                step = 0
                 set_start()
                 set_typ()
                 MCP.output(PreAmp_On, ON if Run else OFF)
                 LTC69122.spiTransfer(slaveNum=0, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
-                time.sleep(0.02) 
+                time.sleep(0.2) 
                 if not Run:
                     gain = 0
                     set_gain(gain)                    
@@ -523,6 +526,7 @@ while not done:
     # print(center_f)
     # pre_str = pre_amp(center_f)
     M_Band = check_Band(center_f)
+
     if M_Band:
         pre_str = Bands[M_Band][-1]
     else:
