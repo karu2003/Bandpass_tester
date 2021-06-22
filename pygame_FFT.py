@@ -196,7 +196,7 @@ Bands = {
 }
 
 def check_Level(max_level_dB,num,accuracy):
-    if max_level_dB in range(num-accuracy,num+accuracy):
+    if max_level_dB in np.arange(num-accuracy,num+accuracy,dtype=float):
         return True
     return False
 
@@ -219,7 +219,7 @@ def check_Band(num):
                 return 12
             if num in range(22,26):
                 return 18                
-            if num in range(44,48):
+            if num in range(44,61):
                 return 40
     else:
         pass            
@@ -318,7 +318,7 @@ pygame.event.set_blocked(pygame.MOUSEBUTTONUP)
 
 clock = pygame.time.Clock()
 
-Step_interval = 500 # ms 500
+Step_interval = 400 # ms 500
 
 pygame.time.set_timer(USEREVENT + 1, Step_interval)
 
@@ -328,7 +328,7 @@ preamp_font = pygame.font.Font('freesansbold.ttf', round(0.07*SCREEN_HEIGHT))
 button_font = pygame.font.Font('freesansbold.ttf', round(0.05*SCREEN_HEIGHT))
 
 
-
+Accuracy = 2
 band = [7000,17000]
 M_Band = 0
 bg_color = 60
@@ -392,7 +392,7 @@ while not done:
                         button_menu1[4][4] = "PreAmp OK"
                     else:
                         button_menu1[4][4] = "PreAmp Fault"
-                fault = fault and check_Level(int(max_level_dB),Bands[M_Band][step],2)
+                fault = fault and check_Level(int(max_level_dB),Bands[M_Band][step],Accuracy)
                 if not fault:
                     print(step)
                 step += 1
@@ -470,10 +470,10 @@ while not done:
     left, right = np.split(np.abs(fft_complex), 2)
     fft_complex = np.add(left, right[::-1])
 
-    Y = np.fft.fft(fft_complex)
-    np.put(Y, range(terms+1, len(fft_complex)), 0.0) # zero-ing coefficients above "terms"
-    fft_complex = np.fft.ifft(Y)
-    fft_complex = fft_complex - np.min(fft_complex)
+    # Y = np.fft.fft(fft_complex)
+    # np.put(Y, range(terms+1, len(fft_complex)), 0.0) # zero-ing coefficients above "terms"
+    # fft_complex = np.fft.ifft(Y)
+    # fft_complex = fft_complex - np.min(fft_complex)
 
 
     x = np.linspace(0, len(fft_complex), len(fft_complex))
@@ -523,7 +523,7 @@ while not done:
     fitted_curve = resample(fitted_curve,SCREEN_WIDTH)
     fr = np.sqrt(band[0]*band[1])
     center_f = np.ceil(fr/1000)
-    # print(center_f)
+    # print('center f ', center_f)
     # pre_str = pre_amp(center_f)
     M_Band = check_Band(center_f)
 
