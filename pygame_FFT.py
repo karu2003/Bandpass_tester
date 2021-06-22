@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import pyaudio
 import os
 import numpy as np
