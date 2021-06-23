@@ -196,6 +196,13 @@ Bands = {
     40:[25,36,48,60,72,83,66,75,'40/80'],
 }
 
+BandsUSBL = {
+     7:[28,40,52,63,75,86,'7/17'],
+    12:[26,38,50,62,74,85,'12/24'],
+    18:[26,38,50,62,74,85,'18/34'],
+    40:[25,36,48,60,72,83,'40/80'],
+}
+
 def check_Level(max_level_dB,num,accuracy):
     if max_level_dB in np.arange(num-accuracy,num+accuracy,dtype=float):
         return True
@@ -409,7 +416,7 @@ while not done:
                             button_menu1[4][4] = "PreAmp Fault"
                     fault = fault and check_Level(int(max_level_dB),Bands[M_Band][step],Accuracy)
                     if not fault:
-                        print(step)
+                        print('fault in step -',step)
                     step += 1
                     step = step % step_len
                     if step in range(len(gains)):
@@ -432,7 +439,38 @@ while not done:
                         MUX.SetChannel(RX_LIM)
                         time.sleep(0.02)
             else:
-                pass            
+                if Run and M_Band:
+                    step_len = len(BandsUSBL[M_Band])-1
+                    if step == step_len-1:
+                        USBL_Ch = 0
+                        Run = False
+                        set_USBL_ch()                        
+                        set_start()
+                        MCP.output(USBL_On, OFF)
+                        if fault:
+                            button_menu1[4][4] = "USBL OK"
+                        else:
+                            button_menu1[4][4] = "USBL Fault"
+                        MUX.SetChannel(RX_MAIN)
+                        break                        
+                    fault = fault and check_Level(int(max_level_dB),BandsUSBL[M_Band][step],Accuracy)
+
+                    if USBL_Ch == 4:
+                        step += 1
+                        step = step % step_len
+                        if step in range(len(gains)):
+                            LTC69122.spiTransfer(slaveNum=1, txData=[gains[step][1]], rxLen=len([gains[step][1]]))
+                            set_gain(step)
+                            time.sleep(0.02) 
+                    
+                    if not fault:
+                        print('fault in Ch',USBL_Ch)
+                    USBL_Ch += 1
+                    USBL_Ch = USBL_Ch % 5
+                    set_USBL_ch()
+                    MUX.SetChannel(USBL_Ch)                
+                    time.sleep(0.01)
+           
 
         elif event.type == pygame.USEREVENT + 2:
             if event.button == 1:    # button 1 = GPIO 17
@@ -488,7 +526,6 @@ while not done:
                     USBL_Ch += 1
                     USBL_Ch = USBL_Ch % 5
                     set_USBL_ch()
-                    print(USBL_Ch)
                     MUX.SetChannel(USBL_Ch)
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
