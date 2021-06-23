@@ -415,13 +415,13 @@ while not done:
                     if step in range(len(gains)):
                         LTC69122.spiTransfer(slaveNum=0, txData=[gains[step][1]], rxLen=len([gains[step][1]]))
                         set_gain(step)
-                        time.sleep(0.2)
+                        time.sleep(0.02)
                     if step == step_len-2:
                         G_Low = 1
                         set_gain_low()
                         MCP.output(Gain_Low, 1)
-                        time.sleep(0.02)
-  
+                        time.sleep(0.02)  
+
                     if step == step_len-1:
                         G_Low = 0
                         set_gain_low()
@@ -431,7 +431,6 @@ while not done:
                         set_channel()
                         MUX.SetChannel(RX_LIM)
                         time.sleep(0.02)
-
             else:
                 pass            
 
@@ -455,6 +454,7 @@ while not done:
                     time.sleep(0.02)    
                     LTC69122.spiTransfer(slaveNum=1, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
                     time.sleep(0.2) 
+
                 if not Run:
                     gain = 0
                     set_gain(gain)                    
