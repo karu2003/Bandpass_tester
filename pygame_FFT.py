@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import pyaudio
 import os
 import numpy as np
@@ -191,7 +192,7 @@ gain = 0
 Bands = {
      7:[28,40,52,63,75,86,66,78,'7/17'],
     12:[26,38,50,62,74,85,66,77,'12/24'],
-    18:[26,38,50,62,74,85,67,77,'18/34'],
+    18:[26,38,50,62,74,85,66,77,'18/34'],
     40:[25,36,48,60,72,83,66,75,'40/80'],
 }
 
@@ -221,8 +222,15 @@ def check_Band(num):
                 return 18                
             if num in range(44,61):
                 return 40
-    else:
-        pass            
+    else: # USBL
+        if num in range(11,17):
+            return 7    
+        if num in range(18,20):
+            return 12
+        if num in range(22,27):
+            return 18                
+        if num in range(44,61):
+            return 40       
 
 def gpiobut(channel):
     if channel == 17:  # check for button 1
@@ -265,6 +273,11 @@ def set_channel():
         button_menu1[3][4] = "Lim->"
     else:
         button_menu1[3][4] = "Main->"
+
+def set_USBL_ch():
+    global USBL_Ch, button_menu1
+    button_menu1[3][4] = ("Ch" + str(USBL_Ch) + "->")
+     
 
 
 
@@ -328,7 +341,7 @@ preamp_font = pygame.font.Font('freesansbold.ttf', round(0.07*SCREEN_HEIGHT))
 button_font = pygame.font.Font('freesansbold.ttf', round(0.05*SCREEN_HEIGHT))
 
 
-Accuracy = 2
+Accuracy = 3
 band = [7000,17000]
 M_Band = 0
 bg_color = 60
@@ -337,6 +350,7 @@ Run = 0
 Typ = 0
 G_Low = 0
 Channel = 0
+USBL_Ch = 0
 max_level = 0
 max_level_dB = 0
 fault = 1 
@@ -376,45 +390,50 @@ while not done:
             break
 
         elif event.type == pygame.USEREVENT + 1:
-            if Run and M_Band:
-                # print(center_f)
-                # print(max_level_dB)      
-                step_len = len(Bands[M_Band])-1
-                if step == step_len-1:
-                    Channel = 0
-                    G_Low = 0
-                    set_channel()
-                    MUX.SetChannel(RX_MAIN)
-                    Run = False
-                    set_start()
-                    MCP.output(PreAmp_On, ON if Run else OFF)
-                    if fault:
-                        button_menu1[4][4] = "PreAmp OK"
-                    else:
-                        button_menu1[4][4] = "PreAmp Fault"
-                fault = fault and check_Level(int(max_level_dB),Bands[M_Band][step],Accuracy)
-                if not fault:
-                    print(step)
-                step += 1
-                step = step % step_len
-                if step in range(len(gains)):
-                    LTC69122.spiTransfer(slaveNum=0, txData=[gains[step][1]], rxLen=len([gains[step][1]]))
-                    set_gain(step)
-                    time.sleep(0.02)
-                if step == step_len-2:
-                    G_Low = 1
-                    set_gain_low()
-                    MCP.output(Gain_Low, 1)
-                    time.sleep(0.02)    
-                if step == step_len-1:
-                    G_Low = 0
-                    set_gain_low()
-                    MCP.output(Gain_Low, 0)
-                    time.sleep(0.02) 
-                    Channel = 1
-                    set_channel()
-                    MUX.SetChannel(RX_LIM)
-                    time.sleep(0.02)
+            if not Typ:
+                if Run and M_Band:
+                    # print(center_f)
+                    # print(max_level_dB)      
+                    step_len = len(Bands[M_Band])-1
+                    if step == step_len-1:
+                        Channel = 0
+                        G_Low = 0
+                        set_channel()
+                        MUX.SetChannel(RX_MAIN)
+                        Run = False
+                        set_start()
+                        MCP.output(PreAmp_On, ON if Run else OFF)
+                        if fault:
+                            button_menu1[4][4] = "PreAmp OK"
+                        else:
+                            button_menu1[4][4] = "PreAmp Fault"
+                    fault = fault and check_Level(int(max_level_dB),Bands[M_Band][step],Accuracy)
+                    if not fault:
+                        print(step)
+                    step += 1
+                    step = step % step_len
+                    if step in range(len(gains)):
+                        LTC69122.spiTransfer(slaveNum=0, txData=[gains[step][1]], rxLen=len([gains[step][1]]))
+                        set_gain(step)
+                        time.sleep(0.2)
+                    if step == step_len-2:
+                        G_Low = 1
+                        set_gain_low()
+                        MCP.output(Gain_Low, 1)
+                        time.sleep(0.02)
+  
+                    if step == step_len-1:
+                        G_Low = 0
+                        set_gain_low()
+                        MCP.output(Gain_Low, 0)
+                        time.sleep(0.02) 
+                        Channel = 1
+                        set_channel()
+                        MUX.SetChannel(RX_LIM)
+                        time.sleep(0.02)
+
+            else:
+                pass            
 
         elif event.type == pygame.USEREVENT + 2:
             if event.button == 1:    # button 1 = GPIO 17
@@ -423,9 +442,19 @@ while not done:
                 step = 0
                 set_start()
                 set_typ()
-                MCP.output(PreAmp_On, ON if Run else OFF)
-                LTC69122.spiTransfer(slaveNum=0, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
-                time.sleep(0.2) 
+                if not Typ:
+                    MCP.output(PreAmp_On, ON if Run else OFF)
+                    time.sleep(0.02)
+                    LTC69122.spiTransfer(slaveNum=0, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
+                    time.sleep(0.2)
+                else:
+                    MCP.output(USBL_On, ON if Run else OFF)
+                    time.sleep(0.02)
+                    set_USBL_ch()
+                    MUX.SetChannel(0 if Run else RX_MAIN)
+                    time.sleep(0.02)    
+                    LTC69122.spiTransfer(slaveNum=1, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
+                    time.sleep(0.2) 
                 if not Run:
                     gain = 0
                     set_gain(gain)                    
@@ -440,7 +469,12 @@ while not done:
                     gain += 1
                     gain = gain % len(gains)
                     set_gain(gain)
-                    LTC69122.spiTransfer(slaveNum=0, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
+                    if not Typ:
+                        LTC69122.spiTransfer(slaveNum=0, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
+                        time.sleep(0.02)
+                    else:
+                        LTC69122.spiTransfer(slaveNum=1, txData=[gains[gain][1]], rxLen=len([gains[gain][1]]))
+                        time.sleep(0.02)    
 
             elif event.button == 4:  # button 3 = GPIO 27
                 if not Typ:
@@ -450,11 +484,21 @@ while not done:
                         MUX.SetChannel(RX_LIM)
                     else:
                         MUX.SetChannel(RX_MAIN)     
-
+                else:
+                    USBL_Ch += 1
+                    USBL_Ch = USBL_Ch % 5
+                    set_USBL_ch()
+                    print(USBL_Ch)
+                    MUX.SetChannel(USBL_Ch)
         
         elif event.type == pygame.MOUSEBUTTONDOWN:
             Typ = not Typ 
             set_typ()
+            MCP.output(USBL_On, OFF)
+            MCP.output(PreAmp_On, OFF)
+            MCP.output(Gain_Low, OFF)
+            MUX.SetChannel(RX_MAIN)
+            Run = 0
          
 
     start = time.time()
@@ -528,7 +572,10 @@ while not done:
     M_Band = check_Band(center_f)
 
     if M_Band:
-        pre_str = Bands[M_Band][-1]
+        if Typ and M_Band == 7:
+            pre_str = "7/34"
+        else:
+            pre_str = Bands[M_Band][-1]
     else:
         pre_str = "Invalid pre AMP"    
  

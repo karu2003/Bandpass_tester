@@ -56,3 +56,6 @@ SUBSYSTEM=="tty", KERNEL=="tty[0-9]*", GROUP="tty", MODE="0660"
 # Features
 
 # References:
+
+# fix Git error: object file is empty
+https://stackoverflow.com/questions/11706215/how-to-fix-git-error-object-file-is-empty
