@@ -220,8 +220,8 @@ while not done:
     _3dB_rest = [i for i in fitted_curve if i > 0]
     if _3dB_rest:
         x_mean = int(len(_3dB_rest)/2) 
-        y_center = np.mean(_3dB_rest[x_mean-fit_point:x_mean+fit_point])
-        # y_center = np.mean(_3dB_rest)
+        # y_center = np.mean(_3dB_rest[x_mean-fit_point:x_mean+fit_point])
+        y_center = np.mean(_3dB_rest)
         # y_center = np.median(_3dB_rest)
         max_fitted2 = y_center * 4
     else:
