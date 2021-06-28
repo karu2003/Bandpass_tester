@@ -18,8 +18,6 @@ from pygame import gfxdraw
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
-terms = 100 # number of terms for the Fourier series
-
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -139,7 +137,7 @@ while not done:
     buff = stream.read(CHUNK)
     data = np.frombuffer(buff, dtype=np.int16)
     max_level = np.max(data)
-    # data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=4)
+    data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=4)
     data = data * np.hamming(len(data))
     # 0
     # fft_complex = np.fft.rfft(data)
@@ -173,14 +171,13 @@ while not done:
 
     # fit
     x = np.linspace(0, len(fft_complex), len(fft_complex))
-    # spline = UnivariateSpline(x, fft_complex-(np.max(fft_complex)/2), s=0)
-    # spline = UnivariateSpline(x, fft_complex, s=0) 
-    # fitted_curve = spline(x)
+    spline = UnivariateSpline(x, fft_complex, s=0) 
+    fitted_curve = spline(x)
     # fit 2
-    try:
-        (a, mu, sig), _ = curve_fit(gauss, x, fft_complex, maxfev = 2000)
-        fitted_curve = gauss(x, a, mu, sig)
-        fitted_curve = fitted_curve - np.min(fitted_curve)
+    # try:
+    #     (a, mu, sig), _ = curve_fit(gauss, x, fft_complex, maxfev = 2000)
+    #     fitted_curve = gauss(x, a, mu, sig)
+    #     fitted_curve = fitted_curve - np.min(fitted_curve)
 ########################################################################         
         # popt, pcov = curve_fit(Lorentzian3, x, fft_complex)
         # fitted_curve = Lorentzian3(x, *popt)
@@ -207,8 +204,15 @@ while not done:
         # popt, _ = curve_fit(poly2, x, fft_complex)
         # a, b, c, d = popt
         # fitted_curve = poly2(x, a, b, c, d)          
-    except:
-        fitted_curve = []    
+    # except:
+    #     fitted_curve = []
+
+    terms = 10 # number of terms for the Fourier series
+    Y = np.fft.fft(fitted_curve)
+    np.put(Y, range(terms+1, len(fitted_curve)), 0.0) # zero-ing coefficients above "terms"
+    fitted_curve = np.fft.ifft(Y)
+    
+    fitted_curve = fitted_curve - np.min(fitted_curve)
     max_fitted = np.max(fitted_curve)
     fitted_curve = fitted_curve - max_fitted * 0.5
     k = [idx for idx, val in enumerate(fitted_curve) if val > 0]
@@ -221,16 +225,24 @@ while not done:
 
 
 ###### Fitting 0dB frequency #########
+
     fit_point = 25
     x_slope = np.arange(0, fit_point, 1)
     _3dB_rest = [i for i in fitted_curve if i > 0]
+
     x_center = int(len(_3dB_rest)/2)
-    y_center = _3dB_rest[x_center]
+    # y_center = _3dB_rest[x_center]
+    # y_center = np.mean(_3dB_rest[x_center-fit_point:x_center+fit_point])
+    y_center = np.mean(_3dB_rest)
     # y_point = _3dB_rest[fit_point]
 ####  left  
     _3dB_restL = _3dB_rest[:fit_point]
-    popt, _ = curve_fit(linear, x_slope, _3dB_restL)
-    a, b = popt
+    try:
+        popt, _ = curve_fit(linear, x_slope, _3dB_restL)
+        a, b = popt
+    except:
+        a = 1
+        b = 0    
     b = 0
     _0dB_fL = int((y_center-b)/a)
     x_L = np.arange(0, _0dB_fL, 1)
@@ -239,8 +251,12 @@ while not done:
 
 ####  right
     _3dB_restR = _3dB_rest[-fit_point:]
-    popt, _ = curve_fit(linear, x_slope, _3dB_restR)
-    a, b = popt
+    try:
+        popt, _ = curve_fit(linear, x_slope, _3dB_restR)
+        a, b = popt
+    except:
+        a = 1
+        b = 0         
     b = 0
     _0dB_fR = int((y_center-b)/a)
     x_R = np.arange(0, np.abs(_0dB_fR), 1)
@@ -253,14 +269,14 @@ while not done:
     center_f = np.sqrt(s0*s1)
     print('center 0dB f ', center_f)
 
-    # # plt.plot(_3dB_restR, 'b')
-    # plt.plot(_3dB_rest, 'g')
-    # plt.plot(fitted_curve, 'y')
-    # x_L = x_L + k[0]
-    # plt.plot(x_L,left_fit, 'b')
-    # x_R = x_R + _0dB_fR
-    # plt.plot(x_R,right_fit+y_center, 'r')
-    # # plt.plot(right_fit, 'r')
+    # plt.plot(_3dB_restR, 'b')
+    plt.plot(_3dB_rest, 'g')
+    plt.plot(fitted_curve, 'y')
+    x_L = x_L + k[0]
+    plt.plot(x_L,left_fit, 'b')
+    x_R = x_R + _0dB_fR
+    plt.plot(x_R,right_fit+y_center, 'r')
+    # plt.plot(right_fit, 'r')
     # plt.show()      
 
     r = np.sqrt(fitted_curve)
