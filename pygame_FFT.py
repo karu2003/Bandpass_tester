@@ -416,7 +416,7 @@ while not done:
                             button_menu1[4][4] = "PreAmp Fault"
                     fault = fault and check_Level(int(max_level_dB),Bands[M_Band][step],Accuracy)
                     if not fault:
-                        print('fault in step -',step)
+                        print('fault in step -',step,'max level dB ',max_level_dB,' soll level dB ',Bands[M_Band][step])
                     step += 1
                     step = step % step_len
                     if step in range(len(gains)):
