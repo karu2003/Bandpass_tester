@@ -260,9 +260,11 @@ while not done:
     center_f = np.sqrt(s0*s1)
     print('center 0dB f ', center_f)
 
-    # plt.plot(_3dB_restR, 'b')
-    # plt.plot(_3dB_rest, 'g')
     # plt.plot(fitted_curve, 'y')
+    # plt.plot(_3dB_rest, 'g')
+
+
+    # plt.plot(_3dB_restR, 'b')
     # x_L = x_L + k[0]
     # plt.plot(x_L,left_fit, 'b')
     # x_R = x_R + _0dB_fR
