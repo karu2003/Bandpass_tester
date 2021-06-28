@@ -96,6 +96,17 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 def gauss(x, a, mu, sig):
     return a**np.exp(-(x-mu)**2/(2.*sig**2))
 
+def Lorentzian3(x, amp1, cen1, wid1, amp2,cen2,wid2, amp3,cen3,wid3):
+    return (amp1*wid1**2/((x-cen1)**2+wid1**2)) +\
+            (amp2*wid2**2/((x-cen2)**2+wid2**2)) +\
+                (amp3*wid3**2/((x-cen3)**2+wid3**2))
+
+def Lorentzian4(x, amp1,cen1,wid1, amp2,cen2,wid2, amp3,cen3,wid3, amp4,cen4,wid4):
+    return (amp1*wid1**2/((x-cen1)**2+wid1**2)) +\
+            (amp2*wid2**2/((x-cen2)**2+wid2**2)) +\
+             (amp3*wid3**2/((x-cen3)**2+wid3**2)) +\
+              (amp4*wid4**2/((x-cen4)**2+wid4**2))
+
 def linear(x, a, b):
 	return a * x + b 
 
@@ -153,7 +164,7 @@ bg_color = 60
 terms = 25
 
 sweep_gen()
-sound.set_volume(0.1)
+sound.set_volume(0.01)
 sound.play(-1)
 
 done = False
@@ -169,6 +180,7 @@ while not done:
     data = np.frombuffer(buff, dtype=np.int16)
     data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=4)
     max_level = np.max(data)
+    # mean_level = np.mean(data)
     data = normalize(data)
     data = data * np.hamming(len(data))
 
@@ -177,51 +189,91 @@ while not done:
     fft_complex = np.add(left, right[::-1])
 
     x = np.linspace(0, len(fft_complex), len(fft_complex))
-    spline = UnivariateSpline(x, fft_complex, s=0) 
-    fitted_curve = spline(x)
-  
-    max_fitted = np.max(fitted_curve)
-    fitted_curve2 = fitted_curve - max_fitted * 0.5
-    fitted_curve2 = np.sqrt(fitted_curve2)
-    fitted_curve2[np.isnan(fitted_curve2)] = 0
- 
-###### Fitting 0dB frequency #########
-    # fit_point = 3
-    # x_slope = np.arange(0, fit_point, 1)
-    # _3dB_slope = [i for i in fitted_curve2 if i > 0]
-    # x_center = int(len(_3dB_slope)/2)
-    # y_center = _3dB_slope[x_center]
-    # # y_center = np.mean(_3dB_slope[x_center-fit_point:x_center-fit_point])
-    # _3dB_slopeL = _3dB_slope[:fit_point]
 
-    # popt, _ = curve_fit(linear, x_slope, _3dB_slopeL)
-    # a, b = popt
-    # _0dB_fL = int((y_center-b)/a)
-
-    # _3dB_slopeR = _3dB_slope[-fit_point:]
-    # popt, _ = curve_fit(linear, x_slope, _3dB_slopeR)
-    # a, b = popt
-    # _0dB_fR = int((y_center-b)/a)
-######################################    
-
-    r = [idx for idx, val in enumerate(fitted_curve2) if val > 0]
-  
     try:
-        band[0]= (f_vec[-1]*r[0])/len(f_vec)
-        band[1]= (f_vec[-1]*r[-1])/len(f_vec)
-        band[2]= 0#(f_vec[-1]*r[_0dB_fL])/len(f_vec)
-        band[3]= 0#(f_vec[-1]*r[-_0dB_fR])/len(f_vec)
+        spline = UnivariateSpline(x, fft_complex, s=0) 
+        fitted_curve = spline(x)
+    except:
+        fitted_curve = np.zeros_like(x)    
+
+    terms = 20 # number of terms for the Fourier series
+    Y = np.fft.fft(fitted_curve)
+    np.put(Y, range(terms+1, len(fitted_curve)), 0.0) # zero-ing coefficients above "terms"
+    fitted_curve = np.fft.ifft(Y)  
+
+    max_fitted = np.max(fitted_curve)
+    fitted_curve = fitted_curve - max_fitted * 0.5
+    k = [idx for idx, val in enumerate(fitted_curve) if val > 0]
+
+    try:
+        s0 = (f_vec[-1]*k[0])/len(f_vec)
+        s1 = (f_vec[-1]*k[-1])/len(f_vec)
+        center_f3dB = np.sqrt(s0*s1)
+    except:
+        s0 = 1
+        s1 = 1
+        center_f3dB = 1
+
+###### Fitting 0dB frequency #########
+    fit_point = 25
+    x_slope = np.arange(0, fit_point, 1)
+    _3dB_rest = [i for i in fitted_curve if i > 0]
+    if _3dB_rest:
+        x_mean = int(len(_3dB_rest)/2) 
+        y_center = np.mean(_3dB_rest[x_mean-fit_point:x_mean+fit_point])
+        # y_center = np.mean(_3dB_rest)
+        # y_center = np.median(_3dB_rest)
+        max_fitted2 = y_center * 4
+    else:
+        y_center = 1 
+
+####  left  
+    _3dB_restL = _3dB_rest[:fit_point]
+    try:
+        popt, _ = curve_fit(linear, x_slope, _3dB_restL)
+        a, b = popt
+        b = 0
+        _0dB_fL = int((y_center-b)/a)
+        x_L = np.arange(0, _0dB_fL, 1)
+        left_fit = linear(x_L, a, b)
+        _0dB_fL = _0dB_fL + k[0]
+    except:
+        _0dB_fL = 0
+
+####  right
+    _3dB_restR = _3dB_rest[-fit_point:]
+    try:
+        popt, _ = curve_fit(linear, x_slope, _3dB_restR)
+        a, b = popt
+        b = 0
+        _0dB_fR = int((y_center-b)/a)
+        x_R = np.arange(0, np.abs(_0dB_fR), 1)
+        right_fit = linear(x_R, a, b)
+        _0dB_fR = k[-1] + _0dB_fR
+    except:
+        _0dB_fR = 0         
+
+    s2= (f_vec[-1]*_0dB_fL)/len(f_vec)
+    s3= (f_vec[-1]*_0dB_fR)/len(f_vec)
+    center_f0dB = np.sqrt(s2*s3)
+
+    try:
+        band[0]= s0
+        band[1]= s1
+        band[2]= s2
+        band[3]= s3
     except:
         band = [0000,0000,0000,0000]     
+   
 
     max_val = np.max(fft_complex)
     scale_value = SCREEN_HEIGHT / max_val
     scale_fitted = SCREEN_HEIGHT / max_fitted
+    scale_y = SCREEN_WIDTH/len(f_vec)
 
     fft_complex = resample(fft_complex,SCREEN_WIDTH)
     fitted_curve = resample(fitted_curve,SCREEN_WIDTH)
-    fr = np.sqrt(band[0]*band[1])
-    center_f = np.ceil(fr/1000)
+    center_f = np.ceil(center_f0dB/1000)
     pre_str = pre_amp(center_f)
  
     for i,v in enumerate(fft_complex):
@@ -241,14 +293,18 @@ while not done:
         level_textRect = level_text.get_rect()
         level_textRect.x, level_textRect.y = round(0.015*SCREEN_WIDTH), round(0.2*SCREEN_HEIGHT)
 
-        preamp_text = preamp_font.render('Pre Amp: '+ (pre_str), True, (255, 255, 255) , (bg_color, bg_color, bg_color))
-        # preamp_text = preamp_font.render('Pre Amp: %.0f / %.0f' %(band[2],band[3]), True, (255, 255, 255) , (bg_color, bg_color, bg_color))
+        # preamp_text = preamp_font.render('Pre Amp: '+ (pre_str), True, (255, 255, 255) , (bg_color, bg_color, bg_color))
+        preamp_text = preamp_font.render('Pre Amp: %.0f / %.0f' %(band[2],band[3]), True, (255, 255, 255) , (bg_color, bg_color, bg_color))
         preamp_textRect = preamp_text.get_rect()
         preamp_textRect.x, preamp_textRect.y = round(0.015*SCREEN_WIDTH), round(0.3*SCREEN_HEIGHT)
 
         screen.blit(band_text, band_textRect)
         screen.blit(level_text, level_textRect)
         screen.blit(preamp_text, preamp_textRect)
+
+    pygame.draw.line(screen, WHITE, (k[0]*scale_y,SCREEN_HEIGHT), (int(_0dB_fL*scale_y), max_fitted2 * scale_value),2)
+    pygame.draw.line(screen, WHITE, (_0dB_fR*scale_y, max_fitted2 * scale_value),(k[-1]*scale_y,SCREEN_HEIGHT),2)
+    pygame.draw.line(screen, WHITE, (_0dB_fL*scale_y, max_fitted2 * scale_value),(_0dB_fR*scale_y,max_fitted2 * scale_value),2)
 
     pygame.display.flip()
     end = time.time()
