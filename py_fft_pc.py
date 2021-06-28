@@ -304,7 +304,9 @@ while not done:
 
         screen.blit(band_text, band_textRect)
         screen.blit(level_text, level_textRect)  
-
+    pygame.draw.line(screen, DARKGREEN, (k[0],SCREEN_HEIGHT), (_0dB_fL, y_center * scale_value),2)
+    pygame.draw.line(screen, DARKGREEN, (_0dB_fR, y_center * scale_value),(k[-1],SCREEN_HEIGHT),2)
+    pygame.draw.line(screen, DARKGREEN, (_0dB_fL, y_center * scale_value),(_0dB_fR, y_center * scale_value),2)
     pygame.display.flip()
     end = time.time()
     # clock.tick(1)
