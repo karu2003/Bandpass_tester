@@ -193,6 +193,13 @@ while not done:
     try:
         spline = UnivariateSpline(x, fft_complex, s=0) 
         fitted_curve = spline(x)
+########################################################################    
+        # (a, mu, sig), _ = curve_fit(gauss, x, fft_complex, maxfev = 2000)
+        # fitted_curve = gauss(x, a, mu, sig)
+        # fitted_curve = fitted_curve - np.min(fitted_curve)
+########################################################################         
+        # popt, pcov = curve_fit(Lorentzian3, x, fft_complex)
+        # fitted_curve = Lorentzian3(x, *popt)                
     except:
         fitted_curve = np.zeros_like(x)    
 
@@ -219,7 +226,7 @@ while not done:
     x_slope = np.arange(0, fit_point, 1)
     _3dB_rest = [i for i in fitted_curve if i > 0]
     if _3dB_rest:
-        x_mean = int(len(_3dB_rest)/2) 
+        # x_mean = int(len(_3dB_rest)/2) 
         # y_center = np.mean(_3dB_rest[x_mean-fit_point:x_mean+fit_point])
         y_center = np.mean(_3dB_rest)
         # y_center = np.median(_3dB_rest)
