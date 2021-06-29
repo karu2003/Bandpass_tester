@@ -9,7 +9,7 @@ import pyaudio
 import numpy as np
 from math import sqrt
 from scipy.interpolate import UnivariateSpline
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, hilbert, freqz, convolve, fftconvolve, correlate 
 from scipy.optimize import curve_fit
 import scipy as sp
 import time
@@ -135,12 +135,57 @@ while not done:
     max_level = np.max(data)
     data = butter_bandpass_filter(data, lowcut, highcut, RATE, order=4)
     data = data * np.hamming(len(data))
+    # hil = hilbert(data)
+####################################
+    fs = RATE # sampling frequecy
+    sample = CHUNK # number of sample
+    f0 = 7000 # 17000 start frequency
+    f1 = 17000 # 18000 end frequency
+    t = np.r_[0:T:1/fs] # time index from 0 to the sampled value with step size of 1/fs
+    ft = f0 + ((f1-f0)/(2*T))*t # some part of the phase
+    phi_of_t = f0*t + ((f1-f0)/(2*T))*(t**2)
+    new_chirp = np.sin(2*np.pi*ft*t) # generate frequency response of chirp
+    # new_chirp = new_chirp[::-1]
+    new_chirp_phi = np.exp(1j*phi_of_t*2*np.pi) # analytic signal
+    new_chirp_phi = new_chirp_phi * np.hamming(len(new_chirp_phi))
+    
+
+    autocorrelation = fftconvolve(data, new_chirp_phi, mode='full')
+    autocorrelation = hilbert(np.real(np.abs(autocorrelation)))
+    # hm = np.max(abs(autocorrelation))/2
+    # vals = []
+    # for i in range(len(autocorrelation)):
+    #     if abs(autocorrelation[i]) >= hm:
+    #         vals.append(abs(autocorrelation[i]))
+
+
+    # fwhm = len(vals) * 1/fs * 1000
+
+    # print("fwhm = ",fwhm, "s")
+    # print("fwhm = ",fwhm*1000, "ms")
+    # print("Pulse compression = ",fwhm*1000/len(autocorrelation))   
+
+    f0 = 7000 # 17000 start frequency
+    f1 = 17000 # 18000 end frequency
+    t = np.r_[0:T:1/fs] # time index from 0 to the sampled value with step size of 1/fs
+    ft = f0 + ((f1-f0)/(2*T))*t # some part of the phase
+    new_chirp = np.sin(2*np.pi*ft*t) # generate frequency response of chirp
+    new_chirp = new_chirp * np.hamming(len(new_chirp))
+
+    autocorrelation1 = fftconvolve(data, new_chirp, mode='full')
+
+
+####################################    
+
     # 0
     # fft_complex = np.fft.rfft(data)
     # 1
+    w, h = freqz(data)
     fft_complex = np.fft.fft(data, n=CHUNK)
     left, right = np.split(np.abs(fft_complex), 2)
     fft_complex = np.add(left, right[::-1])
+    w, h = freqz(data)
+    # fft_complex = h
     # 2
     # fft_complex = (np.abs(np.fft.fft(data))[0:int(np.floor(CHUNK / 2))]) / CHUNK
     # fft_complex[1:] = 2 * fft_complex[1:]
@@ -269,8 +314,18 @@ while not done:
     # plt.plot(x_L,left_fit, 'b')
     # x_R = x_R + _0dB_fR
     # plt.plot(x_R,right_fit+y_center, 'r')
-    # plt.plot(right_fit, 'r')
-    # plt.show()      
+    # t = np.r_[0:1:1/len(data)]
+    # plt.plot(t, abs(hil), 'r')
+    # h = hilbert(h)
+
+
+    # f = (w*RATE)/(2*np.pi)
+    # plt.plot(f,abs(h))
+    # plt.plot(fft_complex, 'b')
+    plt.plot(abs(autocorrelation), 'r')
+    plt.plot(abs(autocorrelation1), 'b')
+    # plt.plot(abs(autocorrelation)/np.max(abs(autocorrelation)),'y')
+    plt.show()      
 
 
     band[0]= s0
